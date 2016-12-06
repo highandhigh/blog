@@ -1,0 +1,115 @@
+//http://www.codeproject.com/Articles/1041042/Extracting-Attachments-from-Outlook-Mailboxes-usin
+//http://stackoverflow.com/questions/861370/want-to-enumerate-outlook-folders
+
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.IO;
+using System.Threading.Tasks;
+
+using Outlook = Microsoft.Office.Interop.Outlook;
+namespace pstreader
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            /* Outlook.Application app = new Outlook.Application();
+
+             Outlook.Accounts accounts = app.Session.Accounts;
+             foreach (Outlook.Account account in accounts)
+             {
+                 Console.WriteLine(account.DisplayName);
+             }    
+
+             Outlook.NameSpace outlookNs = app.GetNamespace("MAPI");
+             Outlook.MAPIFolder emailFolder=outlookNs.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderSentMail);
+             //Outlook.MAPIFolder emailFolder = outlookNs.GetDefaultFolder(Microsoft.Office.Interop.Outlook.OlDefaultFolders.olFolderInbox);
+             foreach (Outlook.MailItem item in emailFolder.Items)
+             {
+                 Console.WriteLine("ConversationID:" + item.ConversationID);
+                 //Console.WriteLine("Sender Name:" + item.SenderName+"Subject:" + item.Subject + "\n" + "Body:" + item.Body);
+                 if (item.Attachments.Count!=0) {
+                     for (int i = 1; i <= item.Attachments.Count; i++) {
+                         Console.WriteLine("Attachments:" + item.Attachments[i].FileName.ToLower());
+                         item.Attachments[i].SaveAsFile(@"C:\Users\Administrator\temp\" + item.Attachments[i].FileName);
+                     }                
+                 }             
+             }*/
+
+            string path = System.Environment.CurrentDirectory;
+            string resultPath = path + @"\result.txt";
+            StreamWriter file = new StreamWriter(resultPath, true);
+
+            Outlook.Application Application = new Outlook.Application();
+            Outlook.Accounts accounts = Application.Session.Accounts;
+            foreach (Outlook.Account account in accounts)
+            {
+                Console.WriteLine("Mail Name:："+account.DisplayName);
+                //Console.WriteLine(account.SmtpAddress);
+                Outlook.Folder selectedFolder = Application.Session.DefaultStore.GetRootFolder() as Outlook.Folder;
+                //Console.WriteLine("selectedFolder.StoreID:" + selectedFolder.StoreID);
+                string result=EnumerateFolders(selectedFolder);
+                file.WriteLine(result);
+            }
+   
+            //Console.ReadKey();
+        }
+
+
+        // Uses recursion to enumerate Outlook subfolders.
+        static string EnumerateFolders(Outlook.Folder folder)
+        {
+           
+            string res=null;
+            Outlook.Folders childFolders = folder.Folders;
+            if (childFolders.Count > 0)
+            {
+                // loop through each childFolder (aka sub-folder) in current folder
+                foreach (Outlook.Folder childFolder in childFolders)
+                {
+                    if ((childFolder.DefaultItemType == Outlook.OlItemType.olMailItem) && (childFolder.Items.Count > 0))
+                    {
+                        Console.WriteLine("Folder Path:"+childFolder.FolderPath);
+                        res = res + childFolder.FolderPath+"\r\n";
+                        //Console.WriteLine(childFolder.DefaultItemType);
+                        Console.WriteLine("Mail Count:"+childFolder.Items.Count + "\n");
+                        res = res + "Mail Count:" + childFolder.Items.Count + "\r\n";
+                        foreach (Object im in childFolder.Items)
+                        {
+                            if (im is Outlook.MailItem)
+                            {
+                                Outlook.MailItem item = (Outlook.MailItem)im;
+                               /* if(item.Subject.Contains("what"))
+                                {
+                                    Console.WriteLine("Sender Name:" + item.SenderName + "\n" + "Subject:" + item.Subject + "\n" + "Body:" + item.Body);
+                                }*/
+                                //Console.WriteLine("ConversationID:" + item.ConversationID + "\n" + "EntryID:" + item.EntryID);
+                                string buff = "Sender Time:" + item.LastModificationTime + "\r\n" + "Sender Name:" + item.SenderName + "\r\n" + "Subject:" + item.Subject + "\r\n" + "Body:" + item.Body;
+                                Console.WriteLine(buff);
+                                res = res +buff + "\r\n";
+                                if (item.Attachments.Count != 0)
+                                {
+                                    for (int i = 1; i <= item.Attachments.Count; i++)
+                                    {
+                                        Console.WriteLine("Attachments:" + item.Attachments[i].FileName);
+                                        res = res +"Attachments:"+ item.Attachments[i].FileName + "\r\n";
+                                        //item.Attachments[i].SaveAsFile(@"C:\Users\Administrator\temp\" + item.Attachments[i].FileName);
+                                    }
+                                }
+                                //EnumerateFolders(childFolder);
+                            }
+                        }
+                    }
+                }
+                // pass folder to IterateMessages which processes individual email messages
+                //Console.WriteLine("Looking for items in " + folder.FolderPath);
+                return res;
+            }
+            return null;
+        }
+    }
+}
+
